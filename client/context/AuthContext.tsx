@@ -6,21 +6,29 @@ const AuthContext = createContext<null | { username: string }>(null);
 const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [username, setUsername] = useState<string | null>(null);
   const [input, setInput] = useState<string>('');
+  const [isClient, setIsClient] = useState(false);
+
   useEffect(() => {
-    setUsername(localStorage.getItem("username"))
-  })
+    setIsClient(true); // Ensures code is running in the browser
+    const storedUsername = localStorage.getItem("username");
+    if (storedUsername) setUsername(storedUsername);
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (input.trim()) {
-      setUsername(input.trim());
-      window.localStorage.setItem("username", input)
+      const trimmed = input.trim();
+      setUsername(trimmed);
+      localStorage.setItem("username", trimmed);
     }
   };
+
+  if (!isClient) return null; // Avoid SSR mismatch
 
   return (
     <AuthContext.Provider value={username ? { username } : null}>
       {
-        username || localStorage.getItem("username") ? (
+        username ? (
           children
         ) : (
           <div className="flex items-center justify-center min-h-screen bg-gray-100">

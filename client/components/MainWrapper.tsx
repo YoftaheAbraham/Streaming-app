@@ -9,7 +9,6 @@ import { useSocket } from "@/context/SocketContext";
 
 interface RoomData {
   RoomTitle: string;
-  maxMembers: number;
   Type: "Private" | "Public";
   Tags: string[];
 }
@@ -23,7 +22,7 @@ const ToRoomNavigator = () => {
   const [roomMaxMembers, setRoomMaxMembers] = useState<number>(4);
   const [roomTitle, setRoomTitle] = useState<string>("");
   const [roomDescription, setRoomDescription] = useState("");
-  const [stream, setStream] = useState<{title: string, tag: string[]; description: string; members: number}[]>([])
+  const [rooms, setRooms] = useState<{title: string, tag: string[]; uid: string; description: string; members: number}[]>([])
 
   const submitRoomData = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -51,7 +50,7 @@ const ToRoomNavigator = () => {
     toast.success("Stream created successfully!");
 
     socket?.emit(
-      "createStream",
+      "createRoom",
       {
         title: roomTitle,
         maxMembers: roomMaxMembers,
@@ -59,8 +58,8 @@ const ToRoomNavigator = () => {
         tags: roomTags,
         description: roomDescription,
       },
-      (StreamID: string) => {
-        router.push(`/stream/${StreamID}`);
+      (RoomID: string) => {
+        router.push(`/room/${RoomID}`);
       }
     );
 
@@ -68,9 +67,12 @@ const ToRoomNavigator = () => {
   };
   useEffect(() => {
     if (socket) {
-      socket?.emit("getStreams", (streamsData: any) => {
-        setStream(streamsData)
+      socket?.emit("getRooms", (streamsData: any) => {
+        setRooms(streamsData)
       });
+      socket?.on("newRoomCreated", rooms => {
+        setRooms(rooms)
+      })      
     }
   }, [socket])
 
@@ -80,6 +82,10 @@ const ToRoomNavigator = () => {
     );
   };
 
+  const handleJoinRoom = (roomID: string) => {
+    router.push(`/room/${roomID}`)
+  }
+
   return (
     <div className="p-6 bg-white text-gray-900 min-h-screen">
       <div className="flex justify-between items-center mb-8">
@@ -88,13 +94,13 @@ const ToRoomNavigator = () => {
           onClick={() => setIsPopupOpen(true)}
           className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-md transition duration-150"
         >
-          + Create Stream
+          + Create Room
         </button>
       </div>
 
       <div className="space-y-4">
         {/* Sample Room Cards */}
-        {stream.map((stream, i) => (
+        {rooms.map((room, i) => (
           <div
             key={i}
             className="p-5 bg-gray-100 rounded-lg shadow hover:shadow-md transition"
@@ -102,18 +108,20 @@ const ToRoomNavigator = () => {
             <div className="flex justify-between items-center">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold">{stream.title}</h3>
+                  <h3 className="text-lg font-semibold">{room.title}</h3>
                   <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
-                    {stream.tag}
+                    {room.tag}
                   </span>
                 </div>
-                <p className="text-gray-600 mt-1 text-sm">{stream.description}</p>
+                <p className="text-gray-600 mt-1 text-sm">{room.description}</p>
                 <div className="flex items-center mt-2 text-sm text-gray-500">
                   <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
-                  <span>{stream.members} members</span>
+                  <span>{room.members} members</span>
                 </div>
               </div>
-              <button className="bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-2 rounded-md transition">
+              <button onClick={() => {
+                handleJoinRoom(room.uid)
+              }} className="bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-2 rounded-md transition">
                 Join
               </button>
             </div>
@@ -133,7 +141,7 @@ const ToRoomNavigator = () => {
           className="p-6 bg-white rounded-lg shadow-lg"
         >
           <h2 className="text-xl font-bold mb-6 text-center text-gray-800">
-            Create New Stream
+            Create New Room
           </h2>
 
           <div className="mb-4">
